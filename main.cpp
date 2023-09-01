@@ -4,6 +4,7 @@
 #include<iostream>
 #include<fstream>
 #include<limits>
+#define _USE_MATH_DEFINES
 #include"geometry.h"
 
 // #define double float
@@ -85,15 +86,15 @@ vec<3> get_color(const vec<3>& orig, const vec<3>& dir, vector<Sphere> spheres){
 // Sphere sphere1;
 
 void work(vector<Sphere> spheres){
-    int height = 720;
-    int width = 1280;
-    double fov = 2;
+    int height = 1080;
+    int width = 1920;
+    double fov = M_PI / 3.0;
 
     vec<3> Camera;
 
     Camera[1] = 0, Camera[2] = 0, Camera[3] = 0;
 
-    vector<vec<3> >Image(width * height);
+    vector<vec<3> >Image(width * height + 1);
 
     for(int i = 1; i <= width; i++)
         for(int j = 1; j <= height; j++){
@@ -108,12 +109,12 @@ void work(vector<Sphere> spheres){
 
     ofstream ofs;
     ofs.open("./out.ppm");
-    ofs << "P6\n" << width <<" "<< height<<"\n255\n";
+    ofs << "P3\n" << width <<" "<< height<<"\n255\n";
     for(int i = 1; i <= width * height; i++){
         for(int j = 1; j <= 3; j++){
             // if(j != 3 && (abs(Image[i][j]) > 1e-5  && abs(Image[i][j] - 255) > 1e-5))
             //     cout << i <<" "<< j <<" "<< Image[i][j]<<" "<<Image[i][j] - 255<<" ",puts("QWQ");
-            ofs << char(floor(Image[i][j]));
+            ofs << (int(Image[i][j])) <<" ";
         }
         // ofs <<" , ";
         // if(i % width == 0)
@@ -124,12 +125,15 @@ void work(vector<Sphere> spheres){
 signed main(){
     bg_col[1] = bg_col[2] = bg_col[3] = 255;
     vec<3> ct = vec<3>{0, 0, 0, -10};
-    vec<3> co1 = vec<3>{0, 0, 200, 0};
-    lights.push_back(Light(vec<3>{0, 10, 10, 0}, 1));
+    vec<3> co1 = vec<3>{0, 124, 100, 0};
+    lights.push_back(Light(vec<3>{0, -20, 20, 20}, 1));
     // co1[1] = 76, co1[2] = 208, co1[3] = 212;
     // ct[1] = 0, ct[2] = 0, ct[3] = -10;
     vector<Sphere> spheres;
-    spheres.push_back(Sphere(ct, 6, co1));
-    spheres.push_back(Sphere(vec<3>{0, 3, 5, -10}, 4, co1));
+    // spheres.push_back(Sphere(ct, 6, co1));
+    spheres.push_back(Sphere(vec<3>{0, -3, 0, -16}, 2, co1));
+    spheres.push_back(Sphere(vec<3>{0, -1, -1.5, -12}, 2, co1));
+    spheres.push_back(Sphere(vec<3>{0, 1.5, -0.5, -18}, 3, co1));
+    spheres.push_back(Sphere(vec<3>{0, 7, 5, -18}, 4, co1));
     work(spheres);
 }
