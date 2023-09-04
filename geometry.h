@@ -28,6 +28,13 @@ template <int n> vec<n> operator- (const vec<n> & x, const vec<n> &y){
     return res;
 }
 
+template <int n> vec<n> operator- (const vec<n> & x){
+    vec<n> res = x;
+    for(int i = 1; i <= n; i++)
+        res[i] = -res[i];
+    return res;
+}
+
 template <int n> double operator* (const vec<n> &x, const vec<n> &y){
     double ans = 0;
     for(int i = 1; i <= n; i++)

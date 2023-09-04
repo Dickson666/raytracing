@@ -14,29 +14,15 @@ using namespace std;
 vec<3> bg_col;
 
 struct Material{
-    vec<4> albedo;
+    vec<3> albedo;
     vec<3> diffuse_color;
     double specular_exponent;
-    double refractive_index;
-    Material(const vec<4>& a, const vec<3>& d, const double& s, const double& r) : albedo(a), diffuse_color(d), specular_exponent(s), refractive_index(r) {}
-    Material() : albedo(), diffuse_color(), specular_exponent(), refractive_index() {}
+    Material(const vec<3>& a, const vec<3>& d, const double& s) : albedo(a), diffuse_color(d), specular_exponent(s) {}
+    Material() : albedo(), diffuse_color(), specular_exponent() {}
 };
 
 vec<3> reflect(const vec<3>& L, const vec<3>& N){
     return 2 * (L * N) * N - L;
-}
-
-vec<3> refract(vec<3> L, vec<3> N, double refractive_index){
-    L = L.normalize();
-    double cos1 = L * N;
-    if(cos1 < 0)
-        N = -N, refractive_index = 1.0 / refractive_index, cos1 = -cos1;
-    double cos2 = sqrt(1 - refractive_index * refractive_index * (1 - cos1 * cos1));
-    if(cos2 < 0)
-        return vec<3>{0, 0, 0, 0};
-    double tan1 = sqrt((1 - cos1 * cos1)) / cos1;
-    double tan2 = sqrt((1 - cos2 * cos2)) / cos2;
-    return (L - N * cos1) / tan1 * tan2 + N * cos1;
 }
 
 struct Sphere{
@@ -114,29 +100,16 @@ double get_specular_light(const vec<3>& N, const vec<3>& point, const vec<3>& V,
     return specular_light_intensity;
 }
 
-vec<3> get_color(const vec<3>& orig, const vec<3>& dir, vector<Sphere> spheres, int dep){
+vec<3> get_color(const vec<3>& orig, const vec<3>& dir, vector<Sphere> spheres){
     vec<3> res = bg_col;
     vec<3> N, point;
     int i = 0;
-    if(dep > 4 || !scene_intersect(orig, dir, spheres, N, point, i))
+    if(!scene_intersect(orig, dir, spheres, N, point, i))
         return bg_col;
     Sphere sphere = spheres[i];
-    vec<3> reflect_dir = reflect(-dir, N).normalize();
-    vec<3> refract_dir = refract(dir, N, sphere.material.refractive_index).normalize();
-    // if(sphere.material.albedo[3])
-    //     cout << dir <<" " << N <<" "<<refract_dir<<"\n",system("pause");
-    vec<3> reflect_orig = reflect_dir * N < 0 ? point - N * 1e-3 : point + N * 1e-3;
-    vec<3> refract_orig = refract_dir * N < 0 ? point - N * 1e-3 : point + N * 1e-3;
-    vec<3> reflect_color = get_color(reflect_orig, reflect_dir, spheres, dep + 1);
-    vec<3> refract_color = get_color(refract_orig, refract_dir, spheres, dep + 1);
-    // if(sphere.material.albedo[3])
-    //     cout << refract_color <<" dir:"<<dir<<" refract_orig:"<< refract_orig<<" refract_dir:"<< refract_dir<<" point"<< point<<"\n", system("pause");
     res = sphere.material.diffuse_color * get_diffuse_light(N, point, spheres) * sphere.material.albedo[0]
-        + vec<3>{0, 255, 255, 255} * get_specular_light(N, point, (vec<3>{0} - sphere.center).normalize(), sphere.material.specular_exponent, spheres) * sphere.material.albedo[1]
-        + reflect_color * sphere.material.albedo[2] + refract_color * sphere.material.albedo[3];
+        + vec<3>{0, 255, 255, 255} * get_specular_light(N, point, (vec<3>{0} - sphere.center).normalize(), sphere.material.specular_exponent, spheres) * sphere.material.albedo[1];
     res[1] = floor(res[1]), res[2] = floor(res[2]), res[3] = floor(res[3]);
-    // if(sphere.material.albedo[3] && res != bg_col && res != vec<3>{0, 204, 204, 204})
-    //     cout << res <<"\n"/*, system("pause")*/;
     return res;
 }
 
@@ -161,7 +134,7 @@ void work(vector<Sphere> spheres){
             vec<3> Now;
             Now[1] = x, Now[2] = y, Now[3] = -1;
             Now = Now.normalize();
-            Image[i + (j - 1) * width] = (get_color(Camera, Now, spheres, 0));
+            Image[i + (j - 1) * width] = (get_color(Camera, Now, spheres));
         }
 
     ofstream ofs;
@@ -181,10 +154,8 @@ void work(vector<Sphere> spheres){
 signed main(){
     bg_col[1] = bg_col[2] = bg_col[3] = 255;
     vec<3> ct = vec<3>{0, 0, 0, -10};
-    Material m1(vec<4>{0.6, 0.3, 0.1, 0}, vec<3>{0, 124, 100, 32}, 50, 1);
-    Material m2(vec<4>{0.9, 0.1, 0, 0}, vec<3>{0, 5, 114, 107} , 10, 1);
-    Material m3(vec<4>{0.0, 10.0, 0.8, 0}, vec<3>{0, 255, 255, 255}, 1425, 1);
-    Material m4(vec<4>{0.0, 0.5, 0.1, 0.8}, vec<3>{0, 135, 175, 200}, 125, 1.5);
+    Material m1(vec<3>{0.6, 0.3, 1}, vec<3>{0, 124, 100, 32}, 50);
+    Material m2(vec<3>{0.9, 0.1, 0}, vec<3>{0, 5, 114, 107} , 10);
     // vec<3> co1 = vec<3>{0, 124, 100, 0};
     lights.push_back(Light(vec<3>{0, -20, 20, 20}, 0.7));
     lights.push_back(Light(vec<3>{0, 30, 50, -25}, 1.3));
@@ -195,8 +166,8 @@ signed main(){
     // vector<Material> materials;
     // spheres.push_back(Sphere(ct, 6, co1));
     spheres.push_back(Sphere(vec<3>{0, -3, 0, -16}, 2, m1));
-    spheres.push_back(Sphere(vec<3>{0, -1, -1.5, -12}, 2, m4));
+    spheres.push_back(Sphere(vec<3>{0, -1, -1.5, -12}, 2, m2));
     spheres.push_back(Sphere(vec<3>{0, 1.5, -0.5, -18}, 3, m2));
-    spheres.push_back(Sphere(vec<3>{0, 7, 5, -18}, 4, m3));
+    spheres.push_back(Sphere(vec<3>{0, 7, 5, -18}, 4, m1));
     work(spheres);
 }
