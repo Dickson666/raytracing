@@ -28,7 +28,7 @@ struct Material{
     double specular_exponent;
     double refractive_index;
     Material(const vec<4>& a, const vec<3>& d, const double& s, const double& r) : albedo(a), diffuse_color(d), specular_exponent(s), refractive_index(r) {}
-    Material() : albedo(vec<4>{1,0,0,0}), diffuse_color(), specular_exponent(), refractive_index() {}
+    Material() : albedo(vec<4>{1,0,0,0}), diffuse_color(), specular_exponent(), refractive_index(1) {}
 };
 
 vec<3> reflect(const vec<3>& L, const vec<3>& N){
@@ -82,13 +82,20 @@ struct Light{
 vector<Light> lights;
 
 vec<3> get_bg_col(vec<3> dir){
-    if(dir.norm() != 1)
+    if(dir.norm() - 1 >= 1e-5){
+        cout << dir.norm() <<"\n";
         return vec<3>{0, 0, 0, 0};
+    }
     int x = -1, y = -1;
-    y = bg_height / 2 + (dir[2] > 0 ? -1 : 1) * asin(fabs(dir[2])) / (M_PI / 2) * (bg_height / 2);
-    x = (dir[1] < 0 ? 3 : 1) * bg_width / 4 + (dir[3] * dir[1] > 0 ? -1 : 1) * (bg_width / 4 * atan(fabs(dir[1]) / fabs(dir[3])) / (M_PI / 2));
-    cout << dir <<" ";
-    cout << x <<" " <<y <<"\n";
+    y = bg_height / 2 + 1 + (dir[2] > 0 ? -1 : 1) * asin(fabs(dir[2])) / (M_PI / 2) * (bg_height / 2);
+    x = (dir[1] < 0 ? 1 : 3) * bg_width / 4 + (dir[3] * dir[1] > 0 ? 1 : -1) * (bg_width / 4 * atan(fabs(dir[3]) / fabs(dir[1])) / (M_PI / 2));
+    // cout << dir <<" ";
+    // cout << x <<" " <<y <<"\n";
+    // if(bgc[max(x - 1, 0) + max(y - 1, 0) * bg_width] == vec<3>{0, 0, 0, 0})
+    //     cout << x <<" " <<y <<"\n", system("pause");
+    // return bgc[max(x - 1, 0) + max(y - 1, 0) * bg_width];
+    // cout << x <<" " << y <<" " << bgc[x - 1 + (y - 1) * bg_width]<<"\n";
+    // system("pause");
     return bgc[x - 1 + (y - 1) * bg_width];
 }
 
@@ -145,11 +152,13 @@ double get_specular_light(const vec<3>& N, const vec<3>& point, const vec<3>& V,
 }
 
 vec<3> get_color(const vec<3>& orig, const vec<3>& dir, vector<Sphere> spheres, int dep){
+    // cout << dir <<'\n';
     vec<3> res = get_bg_col(dir);
     vec<3> N, point;
     Material material;
     if(dep > 4 || !scene_intersect(orig, dir, spheres, N, point, material))
         return res;
+    // cout << "A?\n";
     // Sphere sphere = spheres[i];
     vec<3> reflect_dir = reflect(-dir, N).normalize();
     vec<3> refract_dir = refract(dir, N, material.refractive_index).normalize();
@@ -170,11 +179,15 @@ vec<3> get_color(const vec<3>& orig, const vec<3>& dir, vector<Sphere> spheres, 
     return res;
 }
 
+
+unsigned char *test;
 // Sphere sphere1;
 
 void work(vector<Sphere> spheres){
     int height = 1080;
     int width = 1920;
+    // int height = bg_height;
+    // int width = bg_width;
     double fov = M_PI / 3.0;
 
     vec<3> Camera;
@@ -191,8 +204,13 @@ void work(vector<Sphere> spheres){
 
             vec<3> Now;
             Now[1] = x, Now[2] = y, Now[3] = -1;
+            // cout << Now <<" --> ";
             Now = Now.normalize();
-            Image[i + (j - 1) * width] = (get_color(Camera, Now, spheres, 0));
+            // cout << Now <<"\n";
+            Image[i + (j - 1) * width] = get_color(Camera, Now, spheres, 0);
+            // cout <<i <<" "<<j<<" "<< Image[i + (j - 1)*width] <<"\n";
+            // system("pause");
+            // Image[i + (j - 1) * width] = bgc[i + (j - 1) * bg_width];
         }
     }
 
@@ -211,6 +229,10 @@ void work(vector<Sphere> spheres){
         //     ofs << (int(c[j])) <<" ";
         // }
     }
+    // cout << Image[2] <<"\n";
+    // for(int i = 0; i < bg_width * bg_height * 3; i++)
+    //     if(pixmap[i] != test[i])
+    //         cout << i <<" "<<(int)pixmap[i]<<" "<<(int)test[i]<<" qwq\n", system("pause");
     stbi_write_jpg("out.jpg", width, height, 3, pixmap.data(), 100);
     // ofs.close();
 }
@@ -221,13 +243,13 @@ signed main(){
         printf("No image");
         return -1;
     }
-    vector<vec<3> >bg_col(bg_width * bg_height);
-    for(int i = 0; i < bg_width * bg_height; i += 3)
-        bg_col[i] = vec<3>{0, 1.0 * background[i], 1.0 * background[i + 1], 1.0 * background[i + 2]};
-
-    bgc = bg_col;
+    test = background;
+    // vector<vec<3> >bg_col(bg_width * bg_height);
+    for(int i = 0; i < bg_width * bg_height * 3; i += 3)
+        bgc.push_back(vec<3>{0, 1.0 * background[i], 1.0 * background[i + 1], 1.0 * background[i + 2]});
+    stbi_image_free(background);
     // bg_col[1] = bg_col[2] = bg_col[3] = 255;
-    vec<3> ct = vec<3>{0, 0, 0, -10};
+    // vec<3> ct = vec<3>{0, 0, 0, -10};
     Material m1(vec<4>{0.6, 0.3, 0.1, 0}, vec<3>{0, 124, 100, 32}, 50, 1);
     Material m2(vec<4>{0.9, 0.1, 0, 0}, vec<3>{0, 5, 114, 107} , 10, 1);
     Material m3(vec<4>{0.0, 10.0, 0.8, 0}, vec<3>{0, 255, 255, 255}, 1425, 1);

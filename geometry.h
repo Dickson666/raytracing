@@ -28,6 +28,14 @@ template <int n> vec<n> operator- (const vec<n> & x, const vec<n> &y){
     return res;
 }
 
+template <int n> bool operator== (const vec<n> & x, const vec<n> & y){
+    for (int i = 1; i <= n; i++){
+        if(x[i] != y[i])
+            return false;
+    }
+    return true;
+}
+
 template <int n> vec<n> operator- (const vec<n> & x){
     vec<n> res = x;
     for(int i = 1; i <= n; i++)
